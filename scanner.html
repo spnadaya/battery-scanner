@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QR Scanner Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Load html5-qrcode library -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 20px; }
+    #reader { width: 300px; margin: auto; border: 2px solid #ccc; border-radius: 8px; }
+    #status { margin-top: 15px; font-weight: bold; }
+    button { padding: 10px 20px; margin-top: 15px; border: none; border-radius: 6px; background: #3498db; color: white; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h2>📷 QR Scanner Test</h2>
+  <div id="reader"></div>
+  <button onclick="startScanner()">Start Scanner</button>
+  <div id="status">Ready</div>
+
+  <script>
+    let scanner;
+
+    function startScanner() {
+      scanner = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      scanner.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+          document.getElementById("status").innerText = "✅ Scanned: " + decodedText;
+          document.getElementById("status").style.color = "green";
+          scanner.stop();
+        },
+        (errorMessage) => {
+          // Ignore scan errors
+        }
+      ).catch(err => {
+        let errorMsg = "Camera Error: ";
+        if (err.name === "NotAllowedError") {
+          errorMsg += "Permission Denied. Please allow camera in browser settings.";
+        } else if (err.name === "NotFoundError") {
+          errorMsg += "No camera found on this device.";
+        } else {
+          errorMsg += err;
+        }
+        document.getElementById("status").innerText = errorMsg;
+        document.getElementById("status").style.color = "red";
+      });
+    }
+  </script>
+</body>
+</html>
