@@ -2,52 +2,104 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>QR Scanner Test</title>
+  <title>Battery Station Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Load html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 20px; }
-    #reader { width: 300px; margin: auto; border: 2px solid #ccc; border-radius: 8px; }
+    body { font-family: sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+    #reader { width: 100%; min-height: 250px; background: #000; border-radius: 8px; margin-bottom: 10px; display: none; }
+    input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ccc; border-radius: 5px; }
+    button { padding: 12px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .btn-scan { background: #3498db; width: 100%; }
+    .btn-in { background: #27ae60; }
+    .btn-out { background: #e67e22; }
     #status { margin-top: 15px; font-weight: bold; }
-    button { padding: 10px 20px; margin-top: 15px; border: none; border-radius: 6px; background: #3498db; color: white; font-size: 16px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h2>📷 QR Scanner Test</h2>
-  <div id="reader"></div>
-  <button onclick="startScanner()">Start Scanner</button>
-  <div id="status">Ready</div>
+  <div class="card">
+    <h2>🔋 LSM Battery Station</h2>
+    <div id="reader"></div>
+    <button id="scanBtn" class="btn-scan" onclick="toggleCamera()">📷 OPEN SCANNER</button>
+
+    <input type="text" id="bid" placeholder="Battery ID">
+    <input type="text" id="vno" placeholder="Vehicle No">
+    <input type="number" id="mil" placeholder="Mileage">
+
+    <button class="btn-in" onclick="process('IN')">LOG IN</button>
+    <button class="btn-out" onclick="process('OUT')">LOG OUT</button>
+
+    <div id="status">Ready</div>
+  </div>
 
   <script>
     let scanner;
+    let isScanning = false;
+
+    function toggleCamera() {
+      const readerDiv = document.getElementById('reader');
+      const scanBtn = document.getElementById('scanBtn');
+      if (!isScanning) {
+        readerDiv.style.display = 'block';
+        scanBtn.innerText = "🛑 CLOSE SCANNER";
+        startScanner();
+      } else {
+        stopScanner();
+        readerDiv.style.display = 'none';
+        scanBtn.innerText = "📷 OPEN SCANNER";
+      }
+      isScanning = !isScanning;
+    }
 
     function startScanner() {
       scanner = new Html5Qrcode("reader");
       const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-      scanner.start(
-        { facingMode: "environment" }, 
-        config,
-        (decodedText) => {
-          document.getElementById("status").innerText = "✅ Scanned: " + decodedText;
-          document.getElementById("status").style.color = "green";
-          scanner.stop();
+      scanner.start({ facingMode: "environment" }, config,
+        (text) => {
+          document.getElementById('bid').value = text;
+          document.getElementById('status').innerText = "✅ Scanned: " + text;
+          document.getElementById('status').style.color = "green";
+          toggleCamera();
         },
-        (errorMessage) => {
-          // Ignore scan errors
-        }
+        (err) => {}
       ).catch(err => {
-        let errorMsg = "Camera Error: ";
-        if (err.name === "NotAllowedError") {
-          errorMsg += "Permission Denied. Please allow camera in browser settings.";
-        } else if (err.name === "NotFoundError") {
-          errorMsg += "No camera found on this device.";
-        } else {
-          errorMsg += err;
-        }
-        document.getElementById("status").innerText = errorMsg;
-        document.getElementById("status").style.color = "red";
+        document.getElementById('status').innerText = "Camera Error: " + err;
+        document.getElementById('status').style.color = "red";
+      });
+    }
+
+    function stopScanner() {
+      if (scanner) scanner.stop().catch(e => console.log(e));
+    }
+
+    function process(type) {
+      const status = document.getElementById('status');
+      status.innerText = "Saving to Google Sheets...";
+      status.style.color = "blue";
+
+      const data = {
+        batteryId: document.getElementById('bid').value,
+        vehicleNo: document.getElementById('vno').value,
+        mileage: document.getElementById('mil').value,
+        type: type
+      };
+
+      // Replace with your deployed Apps Script Web App URL
+      fetch("YOUR_SCRIPT_URL", {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.text())
+      .then(msg => {
+        status.innerText = "✅ " + msg;
+        status.style.color = "green";
+        document.getElementById('bid').value = "";
+      })
+      .catch(err => {
+        status.innerText = "❌ Error: " + err;
+        status.style.color = "red";
       });
     }
   </script>
